@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>너구리의 주먹질 — 풀숲 전설편 (에임+하드모드)</title>
+<style>
+:root{
+  --ink:#eef6f0; --leaf:#1d3c2a; --leaf2:#2c5a3f; --leaf3:#0f2419; --accent:#7ed9a7;
+  --warn:#ffd479; --bad:#ff6161; --good:#66ffa1; --panel:#0e1d15; --rope:#35644a;
+}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:
+ radial-gradient(160% 120% at 50% -10%, #214a33 0%, #13281e 40%, #0b1a13 70%, #08140e 100%);} 
+body{color:var(--ink);font-family:system-ui,Segoe UI,Apple SD Gothic Neo,Pretendard,Arial}
+header{position:fixed;inset:0 0 auto 0;height:56px;display:flex;align-items:center;gap:12px;
+  padding:10px 14px;background:#0b1510cc;border-bottom:1px solid #203a2b;backdrop-filter:blur(6px);z-index:40}
+header b{font-weight:900;letter-spacing:.3px}
+.hud{opacity:.9;font-size:12px}
+.stack{display:flex;align-items:center;gap:10px;margin-left:auto}
+.bar{width:190px;height:12px;background:#183224;border-radius:6px;overflow:hidden;border:1px solid #0e2218}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#54e18f,#8af);width:100%;transition:width .18s}
+.bar.enemy>i{background:linear-gradient(90deg,#ff8383,#e33)}
+.bar.st>i{background:linear-gradient(90deg,#89ffb3,#b9f)}
+
+main{position:fixed;inset:56px 0 160px 0;display:grid;place-items:center}
+.ring{position:relative;width:min(920px,94vw);aspect-ratio:16/9;background:
+ radial-gradient(90% 70% at 50% 100%, #0d2016 0 65%, transparent 66%) , #0f2219;
+ border:1px solid #1a3426;box-shadow:0 30px 80px #000a inset,0 10px 40px #000a;overflow:hidden}
+.ropes{position:absolute;inset:auto 0 14% 0;height:28%;background:
+ linear-gradient(var(--rope) 0 0) 0% 0%/100% 2px no-repeat,
+ linear-gradient(var(--rope) 0 0) 0% 50%/100% 2px no-repeat,
+ linear-gradient(var(--rope) 0 0) 0% 100%/100% 2px no-repeat;opacity:.55}
+.leaves{position:absolute;inset:0;pointer-events:none;opacity:.35}
+.leaves i{position:absolute;width:8px;height:14px;border-radius:2px 8px 2px 8px;background:#62a87a}
+@keyframes drift{0%{transform:translateY(-10vh) rotate(0)}100%{transform:translateY(90vh) rotate(180deg)}}
+
+.enemyArea{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);filter:drop-shadow(0 26px 30px #000a)}
+.enemyArea.hit{animation:hit .15s}
+.enemyArea.red{filter:hue-rotate(-10deg) saturate(1.2) drop-shadow(0 0 26px #ff4444)}
+@keyframes hit{0%{transform:translate(-50%,-50%) scale(0.96)}50%{transform:translate(-52%,-48%) scale(1.05)}100%{transform:translate(-50%,-50%) scale(1)}}
+.nameTag{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-weight:900;text-shadow:0 2px 8px #000}
+.tele{position:absolute;left:50%;top:-60px;transform:translateX(-50%);color:var(--warn);opacity:0;transition:opacity .1s;font-weight:800}
+.faceWrap{position:relative;width:min(44vmin,420px);aspect-ratio:1/1.02;border-radius:18px;overflow:hidden;border:1px solid #203a2b;background:#0d1f16}
+.faceWrap img{display:block;width:100%;height:100%;object-fit:cover}
+.faceWrap canvas.fx{position:absolute;inset:0;pointer-events:none}
+
+/* ===== Aiming Reticle ===== */
+.aim{position:absolute;left:50%;bottom:10%;transform:translate(-50%,0);width:0;height:0;pointer-events:none}
+.aim::before{content:"";position:absolute;left:var(--x,0px);bottom:0;width:2px;height:80px;background:linear-gradient(#fff,#7ed9a7);box-shadow:0 0 8px #7ed9a7aa}
+.aimDot{position:absolute;left:calc(var(--x,0px) - 8px);bottom:76px;width:16px;height:16px;border:2px solid #7ed9a7;border-radius:50%;box-shadow:0 0 10px #7ed9a7cc}
+
+/* ===== Fists & Controls ===== */
+.hands{position:fixed;inset:auto 0 0 0;height:140px;display:flex;justify-content:space-between;padding:0 6vw 12px 6vw;pointer-events:none}
+.fist{width:140px;height:112px;border-radius:24px;background-image:url('images/6.png');background-size:contain;background-repeat:no-repeat;background-position:center;
+ box-shadow:0 10px 20px #000a;transform-origin:50% 90%;transition:transform .06s,filter .06s}
+.fist.left{transform:translate(-8px,14px) rotate(6deg)}
+.fist.right{transform:translate(8px,14px) rotate(-6deg) scaleX(-1)}
+.fist.left.punch{transform:translate(-8px,14px) translateY(-35px) rotate(6deg) scale(1.12) !important;filter:brightness(1.3) drop-shadow(0 0 12px rgba(255,200,100,0.8))}
+.fist.right.punch{transform:translate(8px,14px) translateY(-35px) rotate(-6deg) scale(-1.12,1.12) !important;filter:brightness(1.3) drop-shadow(0 0 12px rgba(255,200,100,0.8))}
+.fist.left.block{filter:brightness(1.05);transform:translate(-8px,14px) translateY(-10px) rotate(6deg) scale(1.02)}
+.fist.right.block{filter:brightness(1.05);transform:translate(8px,14px) translateY(-10px) rotate(-6deg) scale(-1.02,1.02)}
+
+.center{position:fixed;inset:0;display:grid;place-items:center;z-index:50}
+.modal{max-width:min(860px,92vw);pointer-events:auto;background:#0b1510e6;border:1px solid #1b3426;border-radius:16px;padding:18px;box-shadow:0 30px 90px #000c}
+.modal h1{margin:0 0 8px;font-size:22px}
+.modal p{margin:8px 0;opacity:.9}
+.modal .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.btn{background:var(--accent);color:#082015;border:none;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
+.btn.secondary{background:#1f3428;color:#cfeee0}
+
+.toast{position:fixed;left:50%;top:66px;transform:translateX(-50%);background:#0b1510d0;border:1px solid #274a38;padding:8px 12px;border-radius:8px;display:none;font-weight:800;z-index:60}
+
+.storyBox{position:fixed;left:50%;top:54px;transform:translateX(-50%);width:min(920px,94vw);background:#0b1510e6;border:1px solid #203a2b;border-radius:14px;padding:14px;z-index:45;display:none}
+.storyBox h2{margin:0 0 8px;font-size:18px}
+.storyText{white-space:pre-wrap;line-height:1.5}
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.choice{background:#183224;border:1px solid #29503a;color:#dff; padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:800}
+
+.skills{position:fixed;right:10px;bottom:166px;display:grid;gap:8px;z-index:35}
+.skill{display:flex;align-items:center;gap:8px;background:#0f1f17;border:1px solid #1b3426;border-radius:10px;padding:6px 8px;min-width:200px}
+.skill b{min-width:120px}
+.cd{height:8px;background:#15271f;border-radius:6px;overflow:hidden;flex:1}
+.cd>i{display:block;height:100%;background:linear-gradient(90deg,#79b,#6af);width:0%}
+
+.touch{position:fixed;inset:auto 0 0 0;height:120px;display:flex;gap:8px;align-items:stretch;justify-content:center;padding:8px;z-index:34}
+.touch button{flex:1;min-width:0;border:1px solid #2a4c38;border-radius:10px;background:#102219;color:#e9f2ff;font-weight:900}
+@media (min-width:980px){.touch{display:none}}
+
+.clone{position:absolute;top:54%;transform:translate(-50%,-50%) scale(.96);opacity:.75;filter:contrast(1.1) saturate(1.05)}
+
+.shake{animation:shake .15s 1}
+@keyframes shake{0%,100%{transform:translate(0) rotate(0)}25%{transform:translate(-4px,2px) rotate(-1deg)}50%{transform:translate(4px,-2px) rotate(1deg)}75%{transform:translate(-2px,1px) rotate(-0.5deg)}}
+</style>
+</head>
+<body tabindex="0">
+<header>
+  <div><b id="title">너구리의 주먹질</b> — <span id="stageTxt">1/5</span> : <span id="enemyName">생쥐</span></div>
+  <div class="stack">
+    <span class="hud">HP</span><div class="bar"><i id="hp"></i></div>
+    <span class="hud">STA</span><div class="bar st"><i id="st"></i></div>
+    <span class="hud">ENEMY</span><div class="bar enemy"><i id="ehp"></i></div>
+  </div>
+</header>
+
+<main>
+  <div class="ring" id="ring">
+    <div class="leaves" id="leaves"></div>
+    <div class="ropes"></div>
+
+    <div class="enemyArea" id="enemyWrap">
+      <div class="nameTag" id="nameTag">생쥐</div>
+      <div class="tele" id="tele">!</div>
+      <div class="faceWrap">
+        <img id="face" src="images/1.png" alt="enemy">
+        <canvas class="fx" id="fx" width="420" height="420"></canvas>
+      </div>
+    </div>
+
+    <!-- 에임 표시 -->
+    <div class="aim" id="aim"><i class="aimDot"></i></div>
+  </div>
+</main>
+
+<!-- 스토리 박스 -->
+<div class="storyBox" id="storyBox">
+  <h2 id="storyTitle">풀숲의 시작</h2>
+  <div class="storyText" id="storyText"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<div class="hands">
+  <div class="fist left" id="left"></div>
+  <div class="fist right" id="right"></div>
+</div>
+
+<div class="skills">
+  <div class="skill"><b>Q 너굴펀치</b><div class="cd"><i id="cdQ"></i></div></div>
+  <div class="skill"><b>E 박치기</b><div class="cd"><i id="cdE"></i></div></div>
+  <div class="skill"><b>R 하울링 가드</b><div class="cd"><i id="cdR"></i></div></div>
+  <div class="skill"><b>T 동료 소환</b><div class="cd"><i id="cdT"></i></div></div>
+</div>
+
+<div class="center" id="center">
+  <div class="modal" id="modal">
+    <h1>너구리의 주먹질 — 풀숲 전설편</h1>
+    <p>비 내리는 풀숲, 야생의 복싱. 5명의 상대를 넘어 전설이 되어라.</p>
+    <p class="hud">조작: A/D=펀치, S/Space=가드, ⇧+←/→=닷지, ←/→=에임, Q/E/R/T=스킬, Enter=시작·다음, P=일시정지</p>
+    <div class="btns"><button class="btn" id="startBtn">시작</button><button class="btn secondary" id="howBtn">조작법</button></div>
+  </div>
+</div>
+
+<div class="touch">
+  <button id="btnAimL">에임◀</button>
+  <button id="btnL">왼주먹</button>
+  <button id="btnBlk">가드</button>
+  <button id="btnR">오른주먹</button>
+  <button id="btnAimR">에임▶</button>
+  <button id="btnQ">Q</button>
+  <button id="btnE">E</button>
+  <button id="btnRk">R</button>
+  <button id="btnT">T</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+// ===== 배경 잎 파티클 =====
+const leaves=document.getElementById('leaves');
+for(let i=0;i<28;i++){
+  const el=document.createElement('i');
+  el.style.left=Math.random()*100+'%';
+  el.style.animation=`drift ${8+Math.random()*8}s linear ${Math.random()*8}s infinite`;
+  el.style.background = Math.random()<.33?'#6fb78d':(Math.random()<.66?'#4f9a73':'#82caa6');
+  leaves.appendChild(el);
+}
+
+// ===== 데이터: 스테이지 & 전투 파라미터 =====
+const STAGES=[
+  {name:"생쥐 ‘치즈보이’", hp:80, atk:9,  freq:1400, tele:240, img:"images/1.png", desc:"풀 가장자리의 날쌘 복서", speed:0.65, skills:['tp']},
+  {name:"토끼 ‘점프짱’",   hp:105, atk:11, freq:1250, tele:220, img:"images/2.png", desc:"점프 훅의 달인", speed:0.8,  skills:['clone']},
+  {name:"사슴 ‘은빛뿔’",   hp:140, atk:13, freq:1150, tele:210, img:"images/3.png", desc:"호수의 수호자", speed:0.95, skills:['tp','clone']},
+  {name:"호랑이 ‘번개줄무늬’",hp:185, atk:19, freq:980,  tele:200, img:"images/4.png", desc:"맹수의 콤보", speed:1.1,  skills:['tp','clone']},
+  {name:"조폭 아메리카라쿤 ‘돈라쿤’", hp:230, atk:23, freq:900,  tele:190, img:"images/5.png", desc:"최후의 적", speed:1.25, skills:['tp','clone']}
+];
+
+// ===== 스토리 시나리오 (원본 기반, 변경 없음) =====
+const Story = {
+  'intro': {
+    title:'풀숲의 시작',
+    text:`풀잎 위 비 냄새. 오래된 글러브가 손에 맞물린다.\n“오늘은… 운명의 날이야.”\n\n무엇부터 할까?`,
+    choices:[
+      {label:'[장비 점검] 방어 습관을 되새긴다 (가드 효율↑)', effect:()=>{ State.guardBoost=0.6; toast('방어 효율 향상'); }, next:'s1_pre'},
+      {label:'[하늘 올려다보기] 마음을 가다듬는다 (첫 스킬 가속)', effect:()=>{ State.firstSkillFast=true; toast('첫 스킬 쿨 -30%'); }, next:'s1_pre'}
+    ]
+  },
+  's1_pre':{ title:'1. 생쥐 ‘치즈보이’', text:`풀 가장자리, 작은 그림자가 툭 튀어나온다.\n“치즈는 훌륭한 단백질이야!”`,
+    choices:[
+      {label:'[농담 던지기] “치즈? 난 된장파야.” (적 회피↓)', effect:()=>{ State.enemyEvasion=0.0; }, next:'fight'},
+      {label:'[조용히 응시] 집중도를 높인다 (공격력 +5%)', effect:()=>{ State.atkBonus+=5; }, next:'fight'}
+    ], beforeFight:true },
+  's2_pre':{ title:'2. 토끼 ‘점프짱’', text:`흙튀는 발놀림. 귀가 바람을 가른다.`,
+    choices:[
+      {label:'[상처를 걱정한다] 전투 후 회복 +10', effect:()=>{ State.onClearHeal=10; }, next:'fight'},
+      {label:'[도발한다] 보상↑/공격빈도↑', effect:()=>{ State.enemyFreqScale=0.9; State.reward+=10; }, next:'fight'}
+    ], beforeFight:true },
+  's3_pre':{ title:'3. 사슴 ‘은빛뿔’', text:`호수 위 안개. “싸움의 끝은 무엇인가.”`,
+    choices:[
+      {label:'[대화] 하울링 가드 강화', effect:()=>{ State.guardEmpower=true; }, next:'fight'},
+      {label:'[침묵] 힘으로 설득한다', effect:()=>{}, next:'fight'}
+    ], beforeFight:true },
+  's4_pre':{ title:'4. 호랑이 ‘번개줄무늬’', text:`옛 스승의 눈빛. 번개가 눈동자에 스친다.`,
+    choices:[
+      {label:'[스승님…] 시작 8초 무적', effect:()=>{ State.startGrace=8000; }, next:'fight'},
+      {label:'[복수 선언] 분노 콤보 (펀치 데미지 점증)', effect:()=>{ State.rageCombo=true; }, next:'fight'}
+    ], beforeFight:true },
+  's5_pre':{ title:'5. 조폭 아메리카라쿤 ‘돈라쿤’', text:`풀 틈 사이, 금빛 체인의 소리. “돈이냐 주먹이냐.”`,
+    choices:[
+      {label:'[타협] 회피 루트 (엔딩1)', effect:()=>{ State.altEnding='truce'; }, next:'fight'},
+      {label:'[정면 대결] (엔딩2)', effect:()=>{ State.altEnding=null; }, next:'fight'},
+      {label:'[“이건 복수가 아니야.”] (엔딩3 전설)', effect:()=>{ State.legendFlag=true; }, next:'fight'}
+    ], beforeFight:true }
+};
+
+// ===== 전역 상태 =====
+const $hp=document.getElementById('hp'), $st=document.getElementById('st'), $ehp=document.getElementById('ehp');
+const $stageTxt=document.getElementById('stageTxt'), $enemyName=document.getElementById('enemyName');
+const $wrap=document.getElementById('enemyWrap'), $tele=document.getElementById('tele'), $name=document.getElementById('nameTag');
+const $faceImg=document.getElementById('face'), $ring=document.getElementById('ring');
+const left=document.getElementById('left'), right=document.getElementById('right');
+const $toast=document.getElementById('toast'), $center=document.getElementById('center'), $modal=document.getElementById('modal');
+const cdQ=document.getElementById('cdQ'), cdE=document.getElementById('cdE'), cdR=document.getElementById('cdR'), cdT=document.getElementById('cdT');
+const storyBox=document.getElementById('storyBox'), storyTitle=document.getElementById('storyTitle'), storyText=document.getElementById('storyText'), choicesBox=document.getElementById('choices');
+const fx=document.getElementById('fx').getContext('2d');
+const aim=document.getElementById('aim');
+
+let stage=0, enemyHp=STAGES[0].hp, playerHp=100, stamina=100;
+let paused=true, stunned=false, blocking=false;
+let enemyLoop=null, lastDodge=0, teleShownAt=0, allyTimer=null, rage=0;
+let enemyX=0.5, enemyDir=1; // 0~1
+let aimX=0.5; // 0~1
+let clones=[]; // {x,el,real:false}
+
+// 펀치 스팸 제어
+let canPunch=true, punchCD=220; // ms (짧은 쿨)
+let lastPunchAt=0;
+
+// 스토리/버프 상태
+const State={
+  guardBoost:0.5,
+  firstSkillFast:false,
+  onClearHeal:0,
+  enemyEvasion:0.05,
+  enemyFreqScale:1.0,
+  reward:0,
+  guardEmpower:false,
+  startGrace:0,
+  rageCombo:false,
+  legendFlag:false,
+  altEnding:null,
+  atkBonus:0
+};
+
+// 편의 함수
+function bar(el,v){ el.style.width=Math.max(0,Math.min(100,v))+'%'; }
+function refreshBars(){ bar($hp,playerHp); bar($st,stamina); const maxE=STAGES[stage].hp; bar($ehp,100*enemyHp/maxE); }
+function toast(msg,ms=900){ $toast.textContent=msg; $toast.style.display='block'; clearTimeout($toast._t);
+  $toast._t=setTimeout(()=> $toast.style.display='none', ms); }
+function flash(color='#ffffff18'){ fx.clearRect(0,0,420,420); fx.fillStyle=color; fx.fillRect(0,0,420,420); setTimeout(()=>fx.clearRect(0,0,420,420),100); }
+function spark(){ fx.strokeStyle='rgba(255,230,160,.95)'; fx.lineWidth=4;
+  for(let i=0;i<10;i++){ fx.beginPath(); const x=210+Math.random()*80-40, y=210+Math.random()*80-40; fx.moveTo(x,y); fx.lineTo(x+(Math.random()*60-30), y+(Math.random()*60-30)); fx.stroke(); } setTimeout(()=> fx.clearRect(0,0,420,420), 120); }
+function setStage(i){
+  stage=i; enemyHp=STAGES[i].hp; playerHp=Math.min(100, playerHp+20+State.onClearHeal); stamina=Math.min(100, stamina+30);
+  enemyX=0.5; enemyDir=1; clearClones();
+  $stageTxt.textContent=`${i+1}/5`; $enemyName.textContent=STAGES[i].name; $name.textContent=STAGES[i].name; $faceImg.src=STAGES[i].img;
+  $wrap.className='enemyArea'; $tele.style.opacity=0; refreshBars(); canPunch=true; blocking=false; stunned=false;
+  placeEnemy();
+}
+
+function placeEnemy(){
+  const ringRect=$ring.getBoundingClientRect();
+  const x=ringRect.width*enemyX;
+  $wrap.style.left = (x) + 'px';
+  $wrap.style.transform='translate(-50%,-50%)';
+}
+
+function placeAim(){
+  const ringRect=$ring.getBoundingClientRect();
+  const x=ringRect.width*aimX - ringRect.width/2;
+  aim.style.setProperty('--x', x+ 'px');
+}
+
+// ===== 스토리 표시 =====
+function showStory(id){
+  const node=Story[id]; storyTitle.textContent=node.title; storyText.textContent=node.text; choicesBox.innerHTML='';
+  node.choices.forEach(ch=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=ch.label; b.onclick=()=>{ ch.effect&&ch.effect(); storyBox.style.display='none'; if(node.beforeFight){ startFight(); } else { showStory(ch.next); } }; choicesBox.appendChild(b); });
+  storyBox.style.display='block'; document.body.focus();
+}
+
+// ===== 적 이동 & 패턴 =====
+let moveTimer=null, skillTimer=null;
+function startMovement(){
+  clearInterval(moveTimer); const speed=STAGES[stage].speed; const dt=16;
+  moveTimer=setInterval(()=>{ if(paused||stunned) return; enemyX += enemyDir*speed*dt/10000; if(enemyX<0.08){enemyX=0.08; enemyDir=1;} if(enemyX>0.92){enemyX=0.92; enemyDir=-1;} placeEnemy(); }, dt);
+}
+
+function enemyPattern(){
+  clearInterval(enemyLoop); clearInterval(skillTimer);
+  const s=STAGES[stage];
+  enemyLoop=setInterval(()=>{ if(paused||stunned) return; telegraphAndAttack(); }, Math.max(380, s.freq*State.enemyFreqScale));
+  // 주기적 스킬: 스테이지가 올라갈수록 더 자주
+  skillTimer=setInterval(()=>{ if(paused) return; const pick=(s.skills[Math.floor(Math.random()*s.skills.length)]);
+    if(pick==='tp') enemyTeleport(); else if(pick==='clone') enemyClones(); }, 5000 - stage*400);
+}
+
+function telegraphAndAttack(){
+  $tele.style.opacity=1; $wrap.classList.add('red'); teleShownAt=Date.now();
+  const s=STAGES[stage];
+  setTimeout(()=>{ $tele.style.opacity=0; $wrap.classList.remove('red'); resolveEnemyAttack(); }, s.tele);
+}
+
+function resolveEnemyAttack(){
+  const s=STAGES[stage];
+  // 시작 무적
+  if(State.startGrace>0){ const now=Date.now(); if(!resolveEnemyAttack._startAt) resolveEnemyAttack._startAt=now; if(now - resolveEnemyAttack._startAt < State.startGrace){ toast('시작 무적'); return; } }
+  let dmg=s.atk;
+  if(blocking){ dmg=Math.floor(dmg*State.guardBoost); stamina=Math.max(0, stamina-8); }
+  if(Date.now()-lastDodge<280) dmg=0;
+  if(dmg===0){ toast('회피!'); spark(); return; }
+  playerHp=Math.max(0, playerHp-dmg); flash('#ff000033'); $ring.classList.add('shake'); setTimeout(()=> $ring.classList.remove('shake'), 120); refreshBars(); if(playerHp<=0) return gameOver(false);
+}
+
+// ===== 적 스킬 =====
+function enemyTeleport(){
+  // 짧은 예열 후 무작위 위치로 순간이동
+  const old=enemyX; flash('#88e0ff33'); setTimeout(()=>{ enemyX = 0.1 + Math.random()*0.8; enemyDir = (enemyX>old)?1:-1; placeEnemy(); flash('#88e0ffaa'); toast('순간이동!'); }, 120);
+}
+
+function clearClones(){ clones.forEach(c=>c.el.remove()); clones=[]; }
+function enemyClones(){
+  if(clones.length) return; // 중첩 방지
+  const count=2 + (stage>2?1:0);
+  const realIndex=Math.floor(Math.random()*(count+1));
+  const frag=document.createDocumentFragment();
+  const ringRect=$ring.getBoundingClientRect();
+  const choices=[];
+  for(let i=0;i<count+1;i++){
+    let x=0.1+Math.random()*0.8; choices.push(x);
+  }
+  choices[realIndex]=enemyX; // 실제 적 하나 포함
+  choices.forEach((x,i)=>{
+    const el=document.createElement('div'); el.className='clone'; el.style.left = (ringRect.width*x) + 'px'; el.style.filter='drop-shadow(0 16px 20px #000a)'; el.innerHTML = document.querySelector('.faceWrap').outerHTML; frag.appendChild(el);
+    clones.push({x,el,real:(i===realIndex)});
+  });
+  $ring.appendChild(frag);
+  toast('분신술! 진짜를 찾아라',1200);
+  // 6초 후 자동 해제
+  setTimeout(()=>{ clearClones(); }, 6000 - stage*300);
+}
+
+function isRealTargetHit(){
+  // 에임과 적/분신의 x 근접 판정
+  const ringRect=$ring.getBoundingClientRect(); const pxAim=ringRect.width*aimX;
+  const tol = 60; // 판정 허용치(px)
+  if(clones.length){
+    // 분신 중이면 진짜만 피해, 가짜 맞추면 역효과
+    let hitAny=false, hitReal=false; let closestFake=null, minDist=1e9;
+    clones.forEach(c=>{ const dx=Math.abs(pxAim - ringRect.width*c.x); if(dx<tol){ hitAny=true; if(c.real) hitReal=true; else if(dx<minDist){minDist=dx; closestFake=c;} } });
+    if(hitAny && !hitReal){ // 가짜 맞춤: 역효과
+      playerHp=Math.max(0, playerHp-6); refreshBars(); flash('#ff557733'); toast('분신의 역습! -6');
+    }
+    return hitReal;
+  }
+  // 평소에는 실제 적 판정
+  const dx=Math.abs(pxAim - ringRect.width*enemyX); return dx<tol;
+}
+
+// ===== 펀치/스킬 =====
+function doPunch(side){
+  if(paused||stamina<=0) return; const now=Date.now(); if(now-lastPunchAt<punchCD){ return; }
+  lastPunchAt=now; // 쿨 적용
+  const fist=(side==='L')?left:right; fist.classList.add('punch'); setTimeout(()=> fist.classList.remove('punch'), 80);
+  stamina=Math.max(0, stamina-7); let base=9 + (State.atkBonus||0), varc=4, dmg=Math.floor(base+Math.random()*varc);
+  // 카운터 타이밍 + 조준 적중 필요
+  const dt=Date.now()-teleShownAt; let counter=false; if (dt>=0 && dt<=160) { dmg=Math.floor(dmg*1.6); counter=true; }
+  // 분노 콤보
+  if(State.rageCombo){ rage++; dmg += Math.floor(rage/4); }
+
+  const hit=isRealTargetHit();
+  $ring.classList.add('shake'); setTimeout(()=> $ring.classList.remove('shake'), 80);
+  if(hit){
+    enemyHp=Math.max(0, enemyHp-dmg); flash('#ffffff44'); spark(); if(counter){ doStun(STAGES[stage].tele+320); toast('카운터! -'+dmg); } else { toast('히트 -'+dmg); }
+  }else{
+    flash('#ffffff11'); toast('빗맞음');
+  }
+  if(enemyHp<=0) return winStage(); refreshBars();
+}
+
+function doStun(ms){ if(stunned) return; stunned=true; $wrap.classList.add('red'); setTimeout(()=>{stunned=false;$wrap.classList.remove('red')}, ms); }
+function block(on){ blocking=on; left.classList.toggle('block', on); right.classList.toggle('block', on); }
+
+// 스태미나 회복 (가드 시 느리게)
+setInterval(()=>{ if(paused) return; stamina=Math.min(100, stamina+(blocking?1.4:2.6)); refreshBars(); }, 250);
+
+// 쿨타임 바
+const cd={Q:0,E:0,R:0,T:0}, cdMax={Q:6300,E:7200,R:10000,T:12000};
+function tickCd(){ for(const k of ['Q','E','R','T']) if(cd[k]>0) cd[k]=Math.max(0,cd[k]-100); cdBar(cdQ,cd.Q,cdMax.Q); cdBar(cdE,cd.E,cdMax.E); cdBar(cdR,cd.R,cdMax.R); cdBar(cdT,cd.T,cdMax.T); }
+function cdBar(el,cur,max){ el.style.width=(100*(1-cur/max))+'%'; }
+setInterval(tickCd,100);
+
+function skillQ(){ // 너굴펀치 (조준 지점 3연격)
+  if(paused||cd.Q>0) return toast('쿨타임…'); cd.Q=State.firstSkillFast?Math.floor(cdMax.Q*0.7):cdMax.Q; State.firstSkillFast=false; toast('너굴펀치!', 600);
+  flash('#7ed9a744'); let hits=0; doStun(320);
+  const combo=setInterval(()=>{ if(hits>=3 || enemyHp<=0 || paused){ clearInterval(combo); return; } const side=(hits%2?'R':'L');
+    lastPunchAt=0; // 콤보는 펀치 쿨 무시
+    doPunch(side); hits++; },110);
+}
+function skillE(){ // 박치기 (조준선 돌진 강타)
+  if(paused||cd.E>0) return toast('쿨타임…'); cd.E=cdMax.E; flash('#ffefaa66'); setTimeout(()=> flash('#ff8800aa'), 50);
+  const hit=isRealTargetHit(); let dmg = 24 + Math.floor(Math.random()*7); if(hit){ enemyHp=Math.max(0, enemyHp-dmg); refreshBars(); toast('박치기!! -'+dmg, 800); doStun(500);} else { toast('박치기 빗맞음'); stamina=Math.max(0, stamina-8); }
+  if(enemyHp<=0) winStage();
+}
+function skillR(){ // 하울링 가드 (무적 + 스태미나 회복)
+  if(paused||cd.R>0) return toast('쿨타임…'); cd.R=cdMax.R; block(true); const dur=State.guardEmpower?3000:2000; toast('하울링! 무적 '+(dur/1000)+'초', 1000);
+  flash('#8fffb055'); let t=0; const reg=setInterval(()=>{ if(t>dur){clearInterval(reg);return;} stamina=Math.min(100, stamina+(State.guardEmpower?4:2)); refreshBars(); t+=200; },200);
+  setTimeout(()=>{ block(false); fx.clearRect(0,0,420,420); },dur);
+}
+function skillT(){ // 동료 소환 (오토타게팅 칩딜)
+  if(paused||cd.T>0) return toast('쿨타임…'); cd.T=cdMax.T; flash('#7ed9a755'); toast('동료 너구리 등장!', 1000);
+  clearInterval(allyTimer); let allyHits=0; allyTimer=setInterval(()=>{ if(paused) return; const chip= 4+Math.floor(Math.random()*3); enemyHp=Math.max(0, enemyHp-chip); allyHits++; if(allyHits%2===0){ flash('#7ed9a733'); spark(); } refreshBars(); if(enemyHp<=0){ clearInterval(allyTimer); winStage(); } },600);
+  setTimeout(()=>{ clearInterval(allyTimer); toast('동료가 사라졌다…', 600); },10000);
+}
+
+// ===== 흐름 제어 =====
+function startFight(){ rage=0; storyBox.style.display='none'; paused=false; canPunch=true; blocking=false; stunned=false; setStage(stage); startMovement(); enemyPattern(); toast('라운드 시작'); }
+function openStoryForStage(i){ const keys=['s1_pre','s2_pre','s3_pre','s4_pre','s5_pre']; showStory(keys[i]); }
+function winStage(){ paused=true; clearInterval(enemyLoop); clearInterval(allyTimer); clearInterval(moveTimer); clearInterval(skillTimer);
+  if(stage>=STAGES.length-1) return gameOver(true); playerHp=Math.min(100, playerHp + 10 + State.onClearHeal); stamina=Math.min(100, stamina+15); stage++; setTimeout(()=> openStoryForStage(stage), 300);
+  $stageTxt.textContent=`${stage+1}/5`; $enemyName.textContent=STAGES[stage].name; $name.textContent=STAGES[stage].name; $faceImg.src=STAGES[stage].img; }
+function gameOver(win){ paused=true; clearInterval(enemyLoop); clearInterval(allyTimer); clearInterval(moveTimer); clearInterval(skillTimer); clearClones();
+  $center.style.display='grid'; let ending='야생의 길은 험했다.'; if(win){ if(State.legendFlag){ ending='전설의 너구리 — “풀숲은 여전히 숨 쉰다.”'; } else if(State.altEnding==='truce'){ ending='타협의 평화 — “주먹도, 돈도, 오늘은 내려두자.”'; } else { ending='승자의 고독 — “비는 계속 내렸다.”'; } }
+  $modal.innerHTML = win?`<h1>모든 스테이지 클리어! 🏆</h1><p>${ending}</p><div class="btns"><button class="btn" id="restart">다시 하기</button></div>`:`<h1>패배…</h1><p>${ending}</p><div class="btns"><button class="btn" id="restart">재도전</button></div>`;
+  document.getElementById('restart').onclick=()=>{ stage=0; enemyHp=STAGES[0].hp; playerHp=100; stamina=100; paused=false; canPunch=true; blocking=false; stunned=false; rage=0; for(const k in State){ delete State[k]; }
+    Object.assign(State,{guardBoost:0.5,firstSkillFast:false,onClearHeal:0,enemyEvasion:0.05,enemyFreqScale:1.0,reward:0,guardEmpower:false,startGrace:0,rageCombo:false,legendFlag:false,altEnding:null, atkBonus:0}); setStage(0); $center.style.display='none'; openStoryForStage(0); };
+}
+
+// ===== 입력 =====
+function focusGame(){ document.body.focus(); }
+document.body.addEventListener('keydown', (e)=>{
+  focusGame(); const k=e.key.toLowerCase(); if(storyBox.style.display==='block'){ if(e.code==='Enter'){ e.preventDefault(); return; } return; }
+  if(k==='a'){ doPunch('L'); } else if(k==='d'){ doPunch('R'); } else {
+    if(k==='s' || e.code==='Space'){ e.preventDefault(); block(true); }
+    // 에임 이동: ←/→, 쉬프트+←/→ = 닷지
+    if(e.code==='ArrowLeft'){ if(e.shiftKey){ lastDodge=Date.now(); toast('닷지!',300);} else { aimX=Math.max(0.06, aimX-0.04); placeAim(); } }
+    if(e.code==='ArrowRight'){ if(e.shiftKey){ lastDodge=Date.now(); toast('닷지!',300);} else { aimX=Math.min(0.94, aimX+0.04); placeAim(); } }
+    if(k==='q') skillQ(); if(k==='e') skillE(); if(k==='r') skillR(); if(k==='t') skillT(); if(k==='p'){ paused=!paused; toast(paused?'일시정지':'재개'); }
+    if(e.code==='Enter'){ if($center.style.display!=='none'){ $center.style.display='none'; openStoryForStage(0); } }
+  }
+});
+document.body.addEventListener('keyup',(e)=>{ if(e.key.toLowerCase()==='s' || e.code==='Space') block(false); });
+
+// 모바일 버튼
+function aimStep(dir){ aimX=Math.max(0.06, Math.min(0.94, aimX + dir*0.05)); placeAim(); }
+document.getElementById('btnAimL').onclick=()=> aimStep(-1);
+document.getElementById('btnAimR').onclick=()=> aimStep(1);
+document.getElementById('btnL').onclick=()=> doPunch('L');
+document.getElementById('btnR').onclick=()=> doPunch('R');
+document.getElementById('btnBlk').onpointerdown=()=> block(true);
+document.getElementById('btnBlk').onpointerup=()=> block(false);
+document.getElementById('btnQ').onclick=()=> skillQ();
+document.getElementById('btnE').onclick=()=> skillE();
+document.getElementById('btnRk').onclick=()=> skillR();
+document.getElementById('btnT').onclick=()=> skillT();
+
+// 시작/도움
+document.getElementById('startBtn').onclick=()=>{ $center.style.display='none'; openStoryForStage(0); };
+document.getElementById('howBtn').onclick=()=> toast("A/D=펀치, S/Space=가드, ⇧+←/→=닷지, ←/→=에임, Q/E/R/T=스킬, ! 직후 에임+펀치=카운터",2200);
+
+// 초기화
+function initAim(){ placeAim(); }
+setStage(0); refreshBars(); focusGame(); initAim();
+})();
+</script>
+</body>
+</html>
